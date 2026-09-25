@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.io.File
+import kotlin.math.roundToInt
 
 data class BillingUiState(
     val heading: String = "Ghar Ka Rashan / Monthly Grocery Bill",
@@ -17,7 +18,7 @@ data class BillingUiState(
     val pdfMessage: String? = null
 ) {
     val totalCount: Int get() = items.size
-    val totalPrice: Double get() = items.sumOf { it.price }
+    val totalPrice: Double get() = items.sumOf { it.totalPrice }
 }
 
 class BillingViewModel : ViewModel() {
@@ -41,19 +42,59 @@ class BillingViewModel : ViewModel() {
         _uiState.update { it.copy(isAddEditOpen = false, editingItem = null) }
     }
 
-    fun saveItem(name: String, price: Double) {
+    fun saveItem(name: String, quantity: Double, unit: ItemUnit, unitPrice: Double) {
         _uiState.update { state ->
             val cleanName = name.trim().ifBlank { "Item" }
-            val cleanPrice = if (price < 0) 0.0 else price
+            val cleanQty = if (quantity <= 0.0) 1.0 else quantity
+            val cleanPrice = if (unitPrice < 0.0) 0.0 else unitPrice
 
             val editing = state.editingItem
             val updatedList = if (editing != null) {
-                state.items.map { if (it.id == editing.id) it.copy(name = cleanName, price = cleanPrice) else it }
+                state.items.map {
+                    if (it.id == editing.id) it.copy(name = cleanName, quantity = cleanQty, unit = unit, unitPrice = cleanPrice) else it
+                }
             } else {
-                state.items + BillingItem(name = cleanName, price = cleanPrice)
+                state.items + BillingItem(name = cleanName, quantity = cleanQty, unit = unit, unitPrice = cleanPrice)
             }
 
             state.copy(items = updatedList, isAddEditOpen = false, editingItem = null)
+        }
+    }
+
+    fun incrementQuantity(id: String) {
+        _uiState.update { state ->
+            state.copy(
+                items = state.items.map { item ->
+                    if (item.id == id) {
+                        val step = when (item.unit) {
+                            ItemUnit.PIECE -> 1.0
+                            ItemUnit.KG, ItemUnit.LITRE -> if (item.quantity < 1.0) 0.25 else 0.5
+                        }
+                        val newQty = ((item.quantity + step) * 100).roundToInt() / 100.0
+                        item.copy(quantity = newQty)
+                    } else item
+                }
+            )
+        }
+    }
+
+    fun decrementQuantity(id: String) {
+        _uiState.update { state ->
+            state.copy(
+                items = state.items.map { item ->
+                    if (item.id == id) {
+                        val newQty = when (item.unit) {
+                            ItemUnit.PIECE -> if (item.quantity > 1.0) item.quantity - 1.0 else 1.0
+                            ItemUnit.KG, ItemUnit.LITRE -> {
+                                val step = if (item.quantity <= 1.0) 0.25 else 0.5
+                                val calculated = ((item.quantity - step) * 100).roundToInt() / 100.0
+                                if (calculated >= 0.25) calculated else 0.25
+                            }
+                        }
+                        item.copy(quantity = newQty)
+                    } else item
+                }
+            )
         }
     }
 

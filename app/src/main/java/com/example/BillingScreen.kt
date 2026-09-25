@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,16 +19,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -37,6 +41,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -112,13 +118,11 @@ fun BillingScreen(
                         },
                         modifier = Modifier.testTag("billing_back_to_calculator")
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back to Calculator",
-                                tint = HeaderTag
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to Calculator",
+                            tint = HeaderTag
+                        )
                     }
                 },
                 title = {
@@ -169,18 +173,18 @@ fun BillingScreen(
                 .fillMaxSize()
                 .background(DarkBackground)
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
             // 1. Bold input box for main heading
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("heading_card"),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         text = "LIST / BILL HEADING",
                         style = MaterialTheme.typography.labelSmall.copy(
@@ -189,7 +193,7 @@ fun BillingScreen(
                             letterSpacing = 1.5.sp
                         )
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = uiState.heading,
                         onValueChange = { billingViewModel.updateHeading(it) },
@@ -206,7 +210,7 @@ fun BillingScreen(
                             unfocusedContainerColor = DarkSurfaceVariant.copy(alpha = 0.3f),
                             cursorColor = HeaderGold
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("main_heading_input")
@@ -214,22 +218,23 @@ fun BillingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // 2. Clean 3-Column Table
+            // 2. Clean 4-Column Table:
+            // 1st col: Saman, 2nd col: Quantity (1kg/1000g, 1L/1000ml, Piece 1=1), 3rd col: Price (Rate), 4th col: Kul Price
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .testTag("billing_table_card"),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(12.dp)
+                        .padding(10.dp)
                 ) {
                     // Table Header Row
                     Surface(
@@ -240,46 +245,60 @@ fun BillingScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 10.dp),
+                                .padding(horizontal = 8.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // 1st Column: Saman
                             Text(
-                                text = "S.N",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = HeaderGold
-                                ),
-                                modifier = Modifier.width(36.dp)
-                            )
-                            Text(
-                                text = "Saman Ka Naam (Item)",
-                                style = MaterialTheme.typography.labelMedium.copy(
+                                text = "Saman",
+                                style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 ),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1.2f)
                             )
+                            // 2nd Column: Quantity
                             Text(
-                                text = "Price (₹)",
-                                style = MaterialTheme.typography.labelMedium.copy(
+                                text = "Quantity",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = HeaderGold
+                                ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.width(82.dp)
+                            )
+                            // 3rd Column: Price (Rate)
+                            Text(
+                                text = "Price",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextSecondary
+                                ),
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.width(62.dp)
+                            )
+                            // 4th Column: Kul Price
+                            Text(
+                                text = "Kul Price",
+                                style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = HeaderTag
                                 ),
                                 textAlign = TextAlign.End,
-                                modifier = Modifier.width(90.dp)
+                                modifier = Modifier.width(72.dp)
                             )
-                            Spacer(modifier = Modifier.width(44.dp))
+                            Spacer(modifier = Modifier.width(26.dp))
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     // Table Scrollable Items List
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("billing_items_list"),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         itemsIndexed(uiState.items, key = { _, item -> item.id }) { index, item ->
                             val isEven = index % 2 == 0
@@ -298,59 +317,132 @@ fun BillingScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        .padding(horizontal = 8.dp, vertical = 7.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // S.N
+                                    // 1st Column: Saman (with S.N index)
+                                    Row(
+                                        modifier = Modifier.weight(1.2f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${index + 1}.",
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                color = TextSecondary,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+                                        Text(
+                                            text = item.name,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Medium
+                                            ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    // 2nd Column: Quantity (with - and + buttons, showing 1kg/500g, 1L/500ml, 1Pc)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.width(82.dp)
+                                    ) {
+                                        Surface(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    billingViewModel.decrementQuantity(item.id)
+                                                },
+                                            color = DarkActionKey,
+                                            shape = CircleShape
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Remove,
+                                                    contentDescription = "Decrease Quantity",
+                                                    tint = TextPrimary,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Text(
+                                            text = item.formattedQuantity,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = HeaderGold
+                                            ),
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.width(42.dp)
+                                        )
+
+                                        Surface(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    billingViewModel.incrementQuantity(item.id)
+                                                },
+                                            color = DarkActionKey,
+                                            shape = CircleShape
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = "Increase Quantity",
+                                                    tint = TextPrimary,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // 3rd Column: Price (Rate per unit e.g. ₹45/kg, ₹66/L, ₹30/pc)
                                     Text(
-                                        text = "${index + 1}",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                        text = item.rateLabel,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Normal,
                                             color = TextSecondary,
-                                            fontWeight = FontWeight.SemiBold
+                                            fontSize = 11.sp
                                         ),
-                                        modifier = Modifier.width(36.dp)
+                                        textAlign = TextAlign.End,
+                                        modifier = Modifier.width(62.dp)
                                     )
 
-                                    // Item Name
+                                    // 4th Column: Kul Price (Total item price)
                                     Text(
-                                        text = item.name,
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = TextPrimary,
-                                            fontWeight = FontWeight.Normal
-                                        ),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    // Price (₹)
-                                    Text(
-                                        text = String.format(Locale.US, "₹ %.2f", item.price),
+                                        text = String.format(Locale.US, "₹%.2f", item.totalPrice),
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontWeight = FontWeight.Bold,
                                             color = HeaderTag
                                         ),
                                         textAlign = TextAlign.End,
-                                        modifier = Modifier.width(90.dp)
+                                        modifier = Modifier.width(72.dp)
                                     )
 
-                                    // Action buttons (Edit & Delete)
-                                    Row(
-                                        modifier = Modifier.width(44.dp),
-                                        horizontalArrangement = Arrangement.End
+                                    // Delete action button
+                                    Box(
+                                        modifier = Modifier.width(26.dp),
+                                        contentAlignment = Alignment.CenterEnd
                                     ) {
                                         IconButton(
                                             onClick = {
                                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                 billingViewModel.deleteItem(item.id)
                                             },
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(22.dp)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
                                                 contentDescription = "Delete item",
                                                 tint = DarkClearKey.copy(alpha = 0.7f),
-                                                modifier = Modifier.size(16.dp)
+                                                modifier = Modifier.size(15.dp)
                                             )
                                         }
                                     }
@@ -362,7 +454,7 @@ fun BillingScreen(
                     HorizontalDivider(
                         color = DarkSurfaceVariant,
                         thickness = 1.dp,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 6.dp)
                     )
 
                     // 5. Total Row
@@ -377,31 +469,40 @@ fun BillingScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                .padding(horizontal = 12.dp, vertical = 9.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.ReceiptLong,
-                                    contentDescription = null,
-                                    tint = HeaderGold,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.ReceiptLong,
+                                        contentDescription = null,
+                                        tint = HeaderGold,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Total Items: ${uiState.totalCount}",
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = HeaderGold
+                                        ),
+                                        modifier = Modifier.testTag("total_items_count")
+                                    )
+                                }
                                 Text(
-                                    text = "Total Items: ${uiState.totalCount}",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = HeaderGold
-                                    ),
-                                    modifier = Modifier.testTag("total_items_count")
+                                    text = "1kg(1000g) • 1L(1000ml) • Piece(1=1)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = TextMuted,
+                                        fontSize = 10.sp
+                                    )
                                 )
                             }
 
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = "TOTAL PRICE",
+                                    text = "TOTAL AMOUNT",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = TextMuted,
                                         fontSize = 10.sp,
@@ -454,7 +555,7 @@ fun BillingScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "+ Naya Saman Jodein",
+                        text = "+ Naya Saman",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -498,13 +599,13 @@ fun BillingScreen(
             }
         }
 
-        // Add / Edit Item Dialog
+        // Add / Edit Item Dialog with 1kg(1000g), 1L(1000ml), Piece (1=1)
         if (uiState.isAddEditOpen) {
             AddEditItemDialog(
                 editingItem = uiState.editingItem,
                 onDismiss = { billingViewModel.closeDialog() },
-                onSave = { name, price ->
-                    billingViewModel.saveItem(name, price)
+                onSave = { name, quantity, unit, price ->
+                    billingViewModel.saveItem(name, quantity, unit, price)
                 }
             )
         }
@@ -595,15 +696,34 @@ fun BillingScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditItemDialog(
     editingItem: BillingItem?,
     onDismiss: () -> Unit,
-    onSave: (String, Double) -> Unit
+    onSave: (String, Double, ItemUnit, Double) -> Unit
 ) {
     var name by remember { mutableStateOf(editingItem?.name ?: "") }
-    var priceText by remember { mutableStateOf(editingItem?.price?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: "") }
+    var selectedUnit by remember { mutableStateOf(editingItem?.unit ?: ItemUnit.KG) }
+    var quantityText by remember {
+        mutableStateOf(
+            editingItem?.let {
+                if (it.quantity % 1.0 == 0.0) it.quantity.toInt().toString() else it.quantity.toString()
+            } ?: "1"
+        )
+    }
+    var priceText by remember {
+        mutableStateOf(
+            editingItem?.unitPrice?.let {
+                if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
+            } ?: ""
+        )
+    }
     var isError by remember { mutableStateOf(false) }
+
+    val parsedQty = quantityText.toDoubleOrNull() ?: 0.0
+    val parsedPrice = priceText.toDoubleOrNull() ?: 0.0
+    val calculatedTotal = parsedQty * parsedPrice
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -622,11 +742,12 @@ fun AddEditItemDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // 1. Saman Ka Naam
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Saman Ka Naam") },
-                    placeholder = { Text("Jaise: Doodh, Cheeni") },
+                    placeholder = { Text("Jaise: Cheeni, Doodh, Sabun") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = HeaderTag,
@@ -638,30 +759,171 @@ fun AddEditItemDialog(
                         .testTag("input_item_name")
                 )
 
-                OutlinedTextField(
-                    value = priceText,
-                    onValueChange = {
-                        priceText = it
-                        isError = false
-                    },
-                    label = { Text("Price (₹)") },
-                    placeholder = { Text("Jaise: 65.50") },
-                    singleLine = true,
-                    isError = isError,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = HeaderTag,
-                        unfocusedBorderColor = DarkSurfaceVariant,
-                        cursorColor = HeaderTag
-                    ),
+                // 2. Unit Selection: 1kg(1000g), 1L(1000ml), Piece(1=1)
+                Column {
+                    Text(
+                        text = "Unit (Maap):",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = HeaderGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ItemUnit.values().forEach { unit ->
+                            val isSelected = unit == selectedUnit
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedUnit = unit },
+                                label = {
+                                    Text(
+                                        text = unit.title,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    )
+                                },
+                                leadingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = DarkOperatorKey,
+                                    selectedLabelColor = Color.Black,
+                                    selectedLeadingIconColor = Color.Black,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // 3. Quick Quantity Presets
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("input_item_price")
-                )
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    when (selectedUnit) {
+                        ItemUnit.KG -> {
+                            PresetChip("250g") { quantityText = "0.25" }
+                            PresetChip("500g") { quantityText = "0.5" }
+                            PresetChip("1 kg") { quantityText = "1" }
+                            PresetChip("2 kg") { quantityText = "2" }
+                            PresetChip("5 kg") { quantityText = "5" }
+                        }
+                        ItemUnit.LITRE -> {
+                            PresetChip("250ml") { quantityText = "0.25" }
+                            PresetChip("500ml") { quantityText = "0.5" }
+                            PresetChip("1 L") { quantityText = "1" }
+                            PresetChip("2 L") { quantityText = "2" }
+                            PresetChip("5 L") { quantityText = "5" }
+                        }
+                        ItemUnit.PIECE -> {
+                            PresetChip("1 Pc") { quantityText = "1" }
+                            PresetChip("2 Pcs") { quantityText = "2" }
+                            PresetChip("4 Pcs") { quantityText = "4" }
+                            PresetChip("6 Pcs") { quantityText = "6" }
+                            PresetChip("12 Pcs") { quantityText = "12" }
+                        }
+                    }
+                }
+
+                // 4. Quantity & Price Inputs
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = quantityText,
+                        onValueChange = {
+                            quantityText = it
+                            isError = false
+                        },
+                        label = { Text("Qty (${selectedUnit.symbol})") },
+                        placeholder = { Text("1 ya 0.5") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = HeaderTag,
+                            unfocusedBorderColor = DarkSurfaceVariant,
+                            cursorColor = HeaderTag
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("input_item_quantity")
+                    )
+
+                    OutlinedTextField(
+                        value = priceText,
+                        onValueChange = {
+                            priceText = it
+                            isError = false
+                        },
+                        label = { Text("Price/1${selectedUnit.symbol} (₹)") },
+                        placeholder = { Text("45") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = HeaderTag,
+                            unfocusedBorderColor = DarkSurfaceVariant,
+                            cursorColor = HeaderTag
+                        ),
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .testTag("input_item_price")
+                    )
+                }
+
+                // 5. Live Calculation Preview Card
+                if (parsedQty > 0 && parsedPrice > 0) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = DarkSurfaceVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val qtyDisplay = if (selectedUnit != ItemUnit.PIECE && parsedQty < 1.0) {
+                                "${(parsedQty * 1000).toInt()}${selectedUnit.subUnit}"
+                            } else {
+                                "$quantityText ${selectedUnit.symbol}"
+                            }
+                            Text(
+                                text = "$qtyDisplay × ₹${String.format(Locale.US, "%.1f", parsedPrice)}",
+                                style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary)
+                            )
+                            Text(
+                                text = "Kul: ₹${String.format(Locale.US, "%.2f", calculatedTotal)}",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = HeaderTag
+                                )
+                            )
+                        }
+                    }
+                }
 
                 if (isError) {
                     Text(
-                        text = "Kripya sahi price enter karein",
+                        text = "Kripya sahi naam, quantity aur price enter karein",
                         color = DarkClearKey,
                         style = MaterialTheme.typography.labelSmall
                     )
@@ -672,10 +934,11 @@ fun AddEditItemDialog(
             Button(
                 onClick = {
                     val priceVal = priceText.toDoubleOrNull()
-                    if (name.isBlank() || priceVal == null) {
+                    val qtyVal = quantityText.toDoubleOrNull()
+                    if (name.isBlank() || priceVal == null || qtyVal == null || qtyVal <= 0.0) {
                         isError = true
                     } else {
-                        onSave(name, priceVal)
+                        onSave(name, qtyVal, selectedUnit, priceVal)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = DarkEqualKey),
@@ -690,4 +953,27 @@ fun AddEditItemDialog(
             }
         }
     )
+}
+
+@Composable
+fun PresetChip(
+    label: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        color = DarkActionKey,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            ),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
 }

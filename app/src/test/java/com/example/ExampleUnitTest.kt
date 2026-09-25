@@ -58,9 +58,21 @@ class ExampleUnitTest {
         assertTrue(names.contains("Sabun"))
         assertTrue(names.contains("Namak"))
 
-        val total = items.sumOf { it.price }
+        val total = items.sumOf { it.totalPrice }
         assertTrue(total > 0)
-        // 66 + 45 + 90 + 380 + 150 + 120 + 35 + 40 + 30 + 25 = 981.0
+        // 1 of each: 66 + 45 + 90 + 380 + 150 + 120 + 35 + 40 + 30 + 25 = 981.0
         assertEquals(981.0, total, 0.01)
+
+        val itemWithQty = BillingItem(name = "Doodh", quantity = 3.0, unit = ItemUnit.LITRE, unitPrice = 66.0)
+        assertEquals(198.0, itemWithQty.totalPrice, 0.01)
+        assertEquals("3L", itemWithQty.formattedQuantity)
+
+        val halfKgSugar = BillingItem(name = "Cheeni", quantity = 0.5, unit = ItemUnit.KG, unitPrice = 45.0)
+        assertEquals(22.50, halfKgSugar.totalPrice, 0.01)
+        assertEquals("500g", halfKgSugar.formattedQuantity)
+
+        val twoPieces = BillingItem(name = "Sabun", quantity = 2.0, unit = ItemUnit.PIECE, unitPrice = 30.0)
+        assertEquals(60.0, twoPieces.totalPrice, 0.01)
+        assertEquals("2Pc", twoPieces.formattedQuantity)
     }
 }

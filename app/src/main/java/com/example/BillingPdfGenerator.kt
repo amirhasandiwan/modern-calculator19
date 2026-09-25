@@ -43,7 +43,7 @@ object BillingPdfGenerator {
         val paint = Paint()
         paint.isAntiAlias = true
 
-        val margin = 40f
+        val margin = 36f
         val contentWidth = pageWidth - (margin * 2)
 
         // 1. Header Banner Background
@@ -82,7 +82,7 @@ object BillingPdfGenerator {
         paint.textAlign = Paint.Align.LEFT
 
         // 2. User Defined Main Heading
-        var currentY = 150f
+        var currentY = 145f
         paint.color = Color.parseColor("#1E293B")
         val headingBg = RectF(margin, currentY - 24f, margin + contentWidth, currentY + 16f)
         canvas.drawRoundRect(headingBg, 8f, 8f, paint)
@@ -93,11 +93,13 @@ object BillingPdfGenerator {
         canvas.drawText(heading.ifBlank { "Billing & Item List" }, margin + 16f, currentY + 2f, paint)
 
         // 3. Table Header
-        currentY += 36f
+        currentY += 34f
         val tableTop = currentY
-        val colSnWidth = 50f
-        val colPriceWidth = 110f
-        val colNameWidth = contentWidth - colSnWidth - colPriceWidth
+        val colSnWidth = 44f
+        val colQtyWidth = 48f
+        val colRateWidth = 85f
+        val colTotalWidth = 95f
+        val colNameWidth = contentWidth - colSnWidth - colQtyWidth - colRateWidth - colTotalWidth
 
         paint.color = Color.parseColor("#0EA5E9") // Cyan Header
         val thRect = RectF(margin, tableTop, margin + contentWidth, tableTop + 28f)
@@ -105,13 +107,21 @@ object BillingPdfGenerator {
 
         paint.color = Color.WHITE
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        paint.textSize = 11f
+        paint.textSize = 10.5f
 
         // Column Titles
-        canvas.drawText("S.N", margin + 14f, tableTop + 18f, paint)
-        canvas.drawText("Saman Ka Naam (Item Name)", margin + colSnWidth + 10f, tableTop + 18f, paint)
+        // S.N
+        canvas.drawText("S.N", margin + 12f, tableTop + 18f, paint)
+        // Name
+        canvas.drawText("Saman Ka Naam", margin + colSnWidth + 8f, tableTop + 18f, paint)
+        // Quantity
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText("Quantity", margin + colSnWidth + colNameWidth + (colQtyWidth / 2f), tableTop + 18f, paint)
+        // Price (₹)
         paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText("Price (₹)", margin + contentWidth - 16f, tableTop + 18f, paint)
+        canvas.drawText("Price (₹)", margin + colSnWidth + colNameWidth + colQtyWidth + colRateWidth - 8f, tableTop + 18f, paint)
+        // Kul Price (₹)
+        canvas.drawText("Kul Price (₹)", margin + contentWidth - 12f, tableTop + 18f, paint)
         paint.textAlign = Paint.Align.LEFT
 
         currentY += 28f
@@ -127,19 +137,28 @@ object BillingPdfGenerator {
             // Row text
             paint.color = Color.parseColor("#0F172A")
             paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            paint.textSize = 10.5f
+            paint.textSize = 10f
 
             // S.N
-            canvas.drawText("${index + 1}", margin + 16f, currentY + 16f, paint)
+            canvas.drawText("${index + 1}", margin + 14f, currentY + 16f, paint)
 
             // Name
-            val displayName = if (item.name.length > 40) item.name.take(38) + "..." else item.name
-            canvas.drawText(displayName, margin + colSnWidth + 10f, currentY + 16f, paint)
+            val displayName = if (item.name.length > 30) item.name.take(28) + "..." else item.name
+            canvas.drawText(displayName, margin + colSnWidth + 8f, currentY + 16f, paint)
 
-            // Price
+            // Quantity with unit
+            paint.textAlign = Paint.Align.CENTER
             paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            canvas.drawText(item.formattedQuantity, margin + colSnWidth + colNameWidth + (colQtyWidth / 2f), currentY + 16f, paint)
+
+            // Unit Price (Rate per kg / L / Pc)
             paint.textAlign = Paint.Align.RIGHT
-            canvas.drawText(String.format(Locale.US, "₹ %.2f", item.price), margin + contentWidth - 16f, currentY + 16f, paint)
+            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            canvas.drawText(item.rateLabel, margin + colSnWidth + colNameWidth + colQtyWidth + colRateWidth - 8f, currentY + 16f, paint)
+
+            // Kul Price (Total Price)
+            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            canvas.drawText(String.format(Locale.US, "₹ %.2f", item.totalPrice), margin + contentWidth - 12f, currentY + 16f, paint)
             paint.textAlign = Paint.Align.LEFT
 
             currentY += rowHeight
@@ -148,21 +167,23 @@ object BillingPdfGenerator {
         // 5. Total Summary Row
         currentY += 6f
         paint.color = Color.parseColor("#1E293B")
-        val totalRect = RectF(margin, currentY, margin + contentWidth, currentY + 34f)
+        val totalRect = RectF(margin, currentY, margin + contentWidth, currentY + 36f)
         canvas.drawRoundRect(totalRect, 8f, 8f, paint)
+
+        val totalQuantityCount = items.sumOf { it.quantity }
 
         // Total Items on Left
         paint.color = Color.parseColor("#FBBF24")
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        paint.textSize = 12f
-        canvas.drawText("Total Items: ${items.size}", margin + 16f, currentY + 22f, paint)
+        paint.textSize = 11.5f
+        canvas.drawText("Total Items: ${items.size}   |   Total Qty: $totalQuantityCount", margin + 14f, currentY + 22f, paint)
 
         // Total Price on Right
         paint.color = Color.parseColor("#38BDF8")
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        paint.textSize = 14f
+        paint.textSize = 13.5f
         paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText(String.format(Locale.US, "Total: ₹ %.2f", totalPrice), margin + contentWidth - 16f, currentY + 22f, paint)
+        canvas.drawText(String.format(Locale.US, "Grand Total: ₹ %.2f", totalPrice), margin + contentWidth - 14f, currentY + 22f, paint)
         paint.textAlign = Paint.Align.LEFT
 
         // 6. Footer Note
