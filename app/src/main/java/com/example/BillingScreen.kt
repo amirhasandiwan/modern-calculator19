@@ -22,13 +22,17 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Remove
@@ -65,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -99,6 +104,7 @@ fun BillingScreen(
     val uiState by billingViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    var showEditPersonDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier
@@ -128,23 +134,88 @@ fun BillingScreen(
                 title = {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.testTag("billing_header_container")
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                            .testTag("billing_header_container")
                     ) {
-                        Text(
-                            text = "AMIR HASAN DIWAN",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 1.6.sp,
-                                color = TextPrimary
-                            ),
-                            modifier = Modifier.testTag("billing_header_title")
-                        )
+                        // Editable Person Name Box (Coloum) right above "BILLING & ITEM LIST"
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth(0.95f)
+                                .background(
+                                    color = DarkSurfaceVariant.copy(alpha = 0.8f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = HeaderGold.copy(alpha = 0.65f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = HeaderGold,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            BasicTextField(
+                                value = uiState.billedBy,
+                                onValueChange = { billingViewModel.updateBilledBy(it) },
+                                textStyle = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.2.sp,
+                                    color = HeaderGold,
+                                    textAlign = TextAlign.Center
+                                ),
+                                singleLine = true,
+                                cursorBrush = SolidColor(HeaderGold),
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .testTag("top_bar_billed_by_input"),
+                                decorationBox = { innerTextField ->
+                                    Box(contentAlignment = Alignment.Center) {
+                                        if (uiState.billedBy.isEmpty()) {
+                                            Text(
+                                                text = "APNA NAAM LIKHEIN",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = HeaderGold.copy(alpha = 0.55f),
+                                                    letterSpacing = 1.sp,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+                            if (uiState.billedBy.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear Name",
+                                    tint = TextSecondary,
+                                    modifier = Modifier
+                                        .size(15.dp)
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            billingViewModel.updateBilledBy("")
+                                        }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "BILLING & ITEM LIST",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp,
-                                color = HeaderGold
+                                letterSpacing = 1.8.sp,
+                                color = TextSecondary
                             )
                         )
                     }
@@ -173,24 +244,177 @@ fun BillingScreen(
                 .fillMaxSize()
                 .background(DarkBackground)
                 .padding(innerPadding)
-                .padding(horizontal = 14.dp, vertical = 8.dp)
+                .padding(horizontal = 14.dp, vertical = 6.dp)
         ) {
-            // 1. Bold input box for main heading
+            // 1. Person Name (Billed By) in Bold & Heading Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("heading_card"),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    // Billing Person Name Header & Input (Bold & Prominent)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = HeaderGold,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "BILLING PERSON (NAME)",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = HeaderGold,
+                                    letterSpacing = 1.3.sp
+                                )
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (uiState.billedBy.isNotBlank()) {
+                                Surface(
+                                    color = HeaderGold.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, HeaderGold.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = uiState.billedBy.uppercase(Locale.ROOT),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = HeaderGold
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            // Dedicated Edit Button
+                            Surface(
+                                color = DarkActionKey,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        showEditPersonDialog = true
+                                    }
+                                    .testTag("btn_open_edit_person")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Person Name",
+                                        tint = HeaderGold,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Edit",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = HeaderGold,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = uiState.billedBy,
+                        onValueChange = { billingViewModel.updateBilledBy(it) },
+                        placeholder = { Text("Apna naam likhein (Jaise: Rahul Sharma)") },
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = HeaderGold,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (uiState.billedBy.isNotBlank()) {
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        billingViewModel.updateBilledBy("")
+                                    },
+                                    modifier = Modifier.testTag("clear_billed_by_name")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Clear name",
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else {
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        showEditPersonDialog = true
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit name",
+                                        tint = HeaderGold,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = HeaderGold
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = HeaderGold,
+                            unfocusedBorderColor = HeaderGold.copy(alpha = 0.5f),
+                            focusedContainerColor = DarkSurfaceVariant.copy(alpha = 0.6f),
+                            unfocusedContainerColor = DarkSurfaceVariant.copy(alpha = 0.35f),
+                            cursorColor = HeaderGold
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("billed_by_person_input")
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        color = DarkSurfaceVariant,
+                        thickness = 1.dp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Bill / List Heading (Niche)
                     Text(
                         text = "LIST / BILL HEADING",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = HeaderTag,
-                            letterSpacing = 1.5.sp
+                            letterSpacing = 1.2.sp
                         )
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -199,16 +423,16 @@ fun BillingScreen(
                         onValueChange = { billingViewModel.updateHeading(it) },
                         placeholder = { Text("Jaise: Ghar Ka Rashan / Grocery Bill") },
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
+                        textStyle = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         ),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = HeaderGold,
+                            focusedBorderColor = HeaderTag,
                             unfocusedBorderColor = DarkSurfaceVariant,
                             focusedContainerColor = DarkSurfaceVariant.copy(alpha = 0.5f),
                             unfocusedContainerColor = DarkSurfaceVariant.copy(alpha = 0.3f),
-                            cursorColor = HeaderGold
+                            cursorColor = HeaderTag
                         ),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
@@ -610,6 +834,18 @@ fun BillingScreen(
             )
         }
 
+        // Edit Person Name Dialog
+        if (showEditPersonDialog) {
+            EditPersonNameDialog(
+                currentName = uiState.billedBy,
+                onDismiss = { showEditPersonDialog = false },
+                onSave = { updatedName ->
+                    billingViewModel.updateBilledBy(updatedName)
+                    showEditPersonDialog = false
+                }
+            )
+        }
+
         // PDF Generation Result Dialog
         uiState.pdfMessage?.let { message ->
             AlertDialog(
@@ -977,3 +1213,97 @@ fun PresetChip(
         )
     }
 }
+
+@Composable
+fun EditPersonNameDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var nameText by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = HeaderGold,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Billing Person Ka Naam",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Billing karne wale person ka naam yahan likhein ya edit karein. Yeh naam header aur PDF invoice me print hoga.",
+                    style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
+                )
+                OutlinedTextField(
+                    value = nameText,
+                    onValueChange = { nameText = it },
+                    placeholder = { Text("Jaise: Rahul Sharma, Amit Ji") },
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = HeaderGold
+                        )
+                    },
+                    trailingIcon = {
+                        if (nameText.isNotBlank()) {
+                            IconButton(onClick = { nameText = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear name",
+                                    tint = TextSecondary
+                                )
+                            }
+                        }
+                    },
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = HeaderGold,
+                        unfocusedBorderColor = DarkSurfaceVariant,
+                        cursorColor = HeaderGold
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("dialog_input_person_name")
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(nameText) },
+                colors = ButtonDefaults.buttonColors(containerColor = DarkEqualKey),
+                modifier = Modifier.testTag("btn_save_person_name")
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = TextSecondary)
+            }
+        }
+    )
+}
+

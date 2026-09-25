@@ -10,6 +10,7 @@ import java.io.File
 import kotlin.math.roundToInt
 
 data class BillingUiState(
+    val billedBy: String = "",
     val heading: String = "Ghar Ka Rashan / Monthly Grocery Bill",
     val items: List<BillingItem> = BillingDefaults.initialItems(),
     val isAddEditOpen: Boolean = false,
@@ -25,6 +26,10 @@ class BillingViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(BillingUiState())
     val uiState: StateFlow<BillingUiState> = _uiState.asStateFlow()
+
+    fun updateBilledBy(newName: String) {
+        _uiState.update { it.copy(billedBy = newName) }
+    }
 
     fun updateHeading(newHeading: String) {
         _uiState.update { it.copy(heading = newHeading) }
@@ -107,6 +112,7 @@ class BillingViewModel : ViewModel() {
     fun resetDefaults() {
         _uiState.update {
             it.copy(
+                billedBy = "",
                 heading = "Ghar Ka Rashan / Monthly Grocery Bill",
                 items = BillingDefaults.initialItems()
             )
@@ -117,6 +123,7 @@ class BillingViewModel : ViewModel() {
         val state = _uiState.value
         val result = BillingPdfGenerator.generatePdf(
             context = context,
+            billedBy = state.billedBy,
             heading = state.heading,
             items = state.items,
             totalPrice = state.totalPrice
