@@ -1,0 +1,6 @@
+{
+  "name": "Calculator",
+  "description": "Clean, modern dark theme calculator app with live expression preview, error prevention, and calculation history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
