@@ -5,9 +5,14 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [CalculationHistoryEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [CalculationHistoryEntity::class, BillingHistoryEntity::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class CalculatorDatabase : RoomDatabase() {
     abstract fun historyDao(): CalculationHistoryDao
+    abstract fun billingHistoryDao(): BillingHistoryDao
 
     companion object {
         @Volatile
@@ -19,7 +24,9 @@ abstract class CalculatorDatabase : RoomDatabase() {
                     context.applicationContext,
                     CalculatorDatabase::class.java,
                     "calculator_history.db"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

@@ -1,5 +1,6 @@
 package com.example
 
+import android.app.Application
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -27,10 +28,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PictureAsPdf
@@ -39,6 +44,8 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -51,6 +58,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -59,6 +67,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -99,7 +108,15 @@ import java.util.Locale
 @Composable
 fun BillingScreen(
     onBackToCalculator: () -> Unit,
-    billingViewModel: BillingViewModel = viewModel()
+    billingViewModel: BillingViewModel = run {
+        val context = LocalContext.current
+        val app = context.applicationContext as? Application
+        if (app != null) {
+            viewModel(factory = BillingViewModel.provideFactory(app))
+        } else {
+            viewModel()
+        }
+    }
 ) {
     val uiState by billingViewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -215,6 +232,34 @@ fun BillingScreen(
                     }
                 },
                 actions = {
+                    // Billing History button with Badge
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            billingViewModel.openHistory()
+                        },
+                        modifier = Modifier.testTag("btn_billing_history")
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (uiState.history.isNotEmpty()) {
+                                    Badge(
+                                        containerColor = HeaderGold,
+                                        contentColor = Color.Black
+                                    ) {
+                                        Text("${uiState.history.size}")
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Billing History",
+                                tint = if (uiState.history.isNotEmpty()) HeaderGold else TextSecondary
+                            )
+                        }
+                    }
+
                     IconButton(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -590,12 +635,12 @@ fun BillingScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 4 & 6. Action Buttons: "+ Naya Saman Jodein" & "Download PDF"
+            // 4 & 6. Billing Action Options: "+ Naya Saman", "Save Bill", "Billing History", "Download PDF"
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Button 1: "+ Naya Saman Jodein"
+                // Option 1: "+ Naya Saman"
                 OutlinedButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -603,43 +648,136 @@ fun BillingScreen(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
+                        .height(48.dp)
                         .testTag("btn_add_item"),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = DarkActionKey,
                         contentColor = TextPrimary
                     ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(DarkOperatorKey))
+                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = SolidColor(DarkOperatorKey))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
                         tint = HeaderGold,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "+ Naya Saman",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = TextPrimary,
+                            fontSize = 13.sp
                         ),
                         maxLines = 1
                     )
                 }
 
-                // Button 2: "Download PDF"
+                // Option 2: "Save Bill"
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        billingViewModel.saveCurrentBill {
+                            Toast.makeText(context, "Bill saved to Billing History!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("btn_save_bill"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = DarkSurfaceVariant.copy(alpha = 0.5f),
+                        contentColor = TextPrimary
+                    ),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = SolidColor(HeaderGold.copy(alpha = 0.6f)))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BookmarkAdd,
+                        contentDescription = null,
+                        tint = HeaderGold,
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Save Bill",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = HeaderGold,
+                            fontSize = 13.sp
+                        ),
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Option 3: "Billing History"
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        billingViewModel.openHistory()
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("btn_billing_history_option"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = DarkActionKey,
+                        contentColor = TextPrimary
+                    ),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = SolidColor(DarkOperatorKey))
+                ) {
+                    BadgedBox(
+                        badge = {
+                            if (uiState.history.isNotEmpty()) {
+                                Badge(
+                                    containerColor = HeaderGold,
+                                    contentColor = Color.Black
+                                ) {
+                                    Text("${uiState.history.size}")
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = if (uiState.history.isNotEmpty()) HeaderGold else TextSecondary,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "History",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            fontSize = 13.sp
+                        ),
+                        maxLines = 1
+                    )
+                }
+
+                // Option 4: "Download PDF"
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         billingViewModel.generatePdf(context)
                     },
                     modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp)
+                        .weight(1.2f)
+                        .height(48.dp)
                         .testTag("btn_download_pdf"),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DarkEqualKey,
                         contentColor = Color.White
@@ -649,14 +787,15 @@ fun BillingScreen(
                         imageVector = Icons.Default.PictureAsPdf,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Download PDF",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 13.sp
                         ),
                         maxLines = 1
                     )
@@ -671,6 +810,40 @@ fun BillingScreen(
                 onDismiss = { billingViewModel.closeDialog() },
                 onSave = { name, quantity, unit, price ->
                     billingViewModel.saveItem(name, quantity, unit, price)
+                }
+            )
+        }
+
+        // Billing History BottomSheet
+        if (uiState.isHistoryOpen) {
+            BillingHistorySheet(
+                history = uiState.history,
+                onDismiss = { billingViewModel.closeHistory() },
+                onLoadBill = { bill ->
+                    billingViewModel.loadBillFromHistory(bill)
+                    Toast.makeText(context, "Bill loaded into Billing!", Toast.LENGTH_SHORT).show()
+                },
+                onDeleteBill = { id ->
+                    billingViewModel.deleteHistoryItem(id)
+                    Toast.makeText(context, "Bill deleted", Toast.LENGTH_SHORT).show()
+                },
+                onClearAll = {
+                    billingViewModel.clearAllHistory()
+                    Toast.makeText(context, "All billing history cleared", Toast.LENGTH_SHORT).show()
+                },
+                onGeneratePdfForHistory = { bill ->
+                    val result = BillingPdfGenerator.generatePdf(
+                        context = context,
+                        billedBy = bill.billedBy,
+                        heading = bill.heading,
+                        items = bill.items,
+                        totalPrice = bill.totalAmount
+                    )
+                    if (result.success && result.file != null) {
+                        BillingPdfGenerator.openOrSharePdf(context, result.file, android.content.Intent.ACTION_VIEW)
+                    } else {
+                        Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                    }
                 }
             )
         }
@@ -1040,6 +1213,363 @@ fun PresetChip(
             ),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BillingHistorySheet(
+    history: List<BillingHistoryItem>,
+    onDismiss: () -> Unit,
+    onLoadBill: (BillingHistoryItem) -> Unit,
+    onDeleteBill: (Long) -> Unit,
+    onClearAll: () -> Unit,
+    onGeneratePdfForHistory: (BillingHistoryItem) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showClearConfirmation by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = DarkSurface,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 10.dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(TextMuted.copy(alpha = 0.6f))
+            )
+        },
+        modifier = Modifier.testTag("billing_history_sheet")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ReceiptLong,
+                        contentDescription = null,
+                        tint = HeaderGold,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Billing History",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        )
+                        Text(
+                            text = if (history.isEmpty()) "Koi saved bill nahi hai" else "${history.size} bills saved in local database",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
+                        )
+                    }
+                }
+
+                if (history.isNotEmpty()) {
+                    TextButton(
+                        onClick = { showClearConfirmation = true },
+                        modifier = Modifier.testTag("btn_clear_all_billing_history")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ClearAll,
+                            contentDescription = null,
+                            tint = DarkClearKey,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Clear All",
+                            color = DarkClearKey,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = DarkSurfaceVariant
+            )
+
+            if (history.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ReceiptLong,
+                        contentDescription = null,
+                        tint = TextMuted,
+                        modifier = Modifier.size(46.dp)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "No saved bills yet",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = TextSecondary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Bill save karne ke liye 'Save Bill' ya 'Download PDF' tap karein",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        ),
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(history, key = { _, item -> item.id }) { _, bill ->
+                        BillingHistoryCard(
+                            bill = bill,
+                            onLoad = { onLoadBill(bill) },
+                            onPdf = { onGeneratePdfForHistory(bill) },
+                            onDelete = { onDeleteBill(bill.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showClearConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmation = false },
+            containerColor = DarkSurface,
+            title = {
+                Text(
+                    text = "Clear All Billing History?",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Kya aap saare saved bills delete karna chahte hain? Yeh wapas nahi aayenge.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearAll()
+                        showClearConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkClearKey),
+                    modifier = Modifier.testTag("btn_confirm_clear_billing_history")
+                ) {
+                    Text("Delete All", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmation = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun BillingHistoryCard(
+    bill: BillingHistoryItem,
+    onLoad: () -> Unit,
+    onPdf: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("billing_history_card_${bill.id}"),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant.copy(alpha = 0.7f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DarkOperatorKey.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Row 1: Heading & BilledBy (if present)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = bill.heading.ifBlank { "Billing & Item List" },
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (bill.billedBy.isNotBlank()) {
+                    Surface(
+                        color = HeaderGold.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, HeaderGold.copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = bill.billedBy.uppercase(Locale.ROOT),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = HeaderGold,
+                                fontSize = 10.sp
+                            ),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Row 2: Date & Amount
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${bill.formattedDate} • ${bill.itemCount} Saman",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                )
+
+                Text(
+                    text = String.format(Locale.US, "₹ %.2f", bill.totalAmount),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = HeaderTag
+                    )
+                )
+            }
+
+            // Row 3: Items preview summary
+            if (bill.items.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                val itemsSummary = bill.items.take(4).joinToString(", ") { "${it.name} (${it.formattedQuantity})" } +
+                        if (bill.items.size > 4) " +${bill.items.size - 4} more" else ""
+                Text(
+                    text = itemsSummary,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = DarkSurface, thickness = 0.8.dp)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Action Buttons: Load Bill, PDF, Delete
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Delete button
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Bill",
+                        tint = DarkClearKey.copy(alpha = 0.85f),
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Download/View PDF
+                OutlinedButton(
+                    onClick = onPdf,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DarkEqualKey),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PictureAsPdf,
+                        contentDescription = null,
+                        tint = DarkEqualKey,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "PDF",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = DarkEqualKey
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Load Bill into Active Editor
+                Button(
+                    onClick = onLoad,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = HeaderGold),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FileDownload,
+                        contentDescription = null,
+                        tint = Color.Black,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Load Bill",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    )
+                }
+            }
+        }
     }
 }
 

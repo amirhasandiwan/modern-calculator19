@@ -1,13 +1,32 @@
 package com.example
 
+import android.app.Application
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.data.BillingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
+
+data class BillingHistoryItem(
+    val id: Long,
+    val billedBy: String,
+    val heading: String,
+    val items: List<BillingItem>,
+    val itemCount: Int,
+    val totalAmount: Double,
+    val formattedDate: String,
+    val timestamp: Long
+)
 
 data class BillingUiState(
     val billedBy: String = "",
@@ -16,16 +35,45 @@ data class BillingUiState(
     val isAddEditOpen: Boolean = false,
     val editingItem: BillingItem? = null,
     val generatedPdfFile: File? = null,
-    val pdfMessage: String? = null
+    val pdfMessage: String? = null,
+    val isHistoryOpen: Boolean = false,
+    val history: List<BillingHistoryItem> = emptyList(),
+    val saveBillMessage: String? = null
 ) {
     val totalCount: Int get() = items.size
     val totalPrice: Double get() = items.sumOf { it.totalPrice }
 }
 
-class BillingViewModel : ViewModel() {
+class BillingViewModel(
+    private val repository: BillingRepository? = null
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BillingUiState())
     val uiState: StateFlow<BillingUiState> = _uiState.asStateFlow()
+
+    private val dateFormatter = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+
+    init {
+        repository?.let { repo ->
+            viewModelScope.launch {
+                repo.history.collect { entities ->
+                    val historyItems = entities.map { entity ->
+                        BillingHistoryItem(
+                            id = entity.id,
+                            billedBy = entity.billedBy,
+                            heading = entity.heading,
+                            items = BillingRepository.jsonToItems(entity.itemsJson),
+                            itemCount = entity.itemCount,
+                            totalAmount = entity.totalAmount,
+                            formattedDate = dateFormatter.format(Date(entity.timestamp)),
+                            timestamp = entity.timestamp
+                        )
+                    }
+                    _uiState.update { it.copy(history = historyItems) }
+                }
+            }
+        }
+    }
 
     fun updateBilledBy(newName: String) {
         _uiState.update { it.copy(billedBy = newName) }
@@ -45,6 +93,60 @@ class BillingViewModel : ViewModel() {
 
     fun closeDialog() {
         _uiState.update { it.copy(isAddEditOpen = false, editingItem = null) }
+    }
+
+    fun openHistory() {
+        _uiState.update { it.copy(isHistoryOpen = true) }
+    }
+
+    fun closeHistory() {
+        _uiState.update { it.copy(isHistoryOpen = false) }
+    }
+
+    fun toggleHistory() {
+        _uiState.update { it.copy(isHistoryOpen = !it.isHistoryOpen) }
+    }
+
+    fun saveCurrentBill(onSuccess: (() -> Unit)? = null) {
+        val state = _uiState.value
+        if (state.items.isEmpty()) return
+        viewModelScope.launch {
+            repository?.saveBill(
+                billedBy = state.billedBy,
+                heading = state.heading,
+                items = state.items,
+                totalAmount = state.totalPrice
+            )
+            _uiState.update { it.copy(saveBillMessage = "Bill successfully saved to History!") }
+            onSuccess?.invoke()
+        }
+    }
+
+    fun loadBillFromHistory(item: BillingHistoryItem) {
+        _uiState.update {
+            it.copy(
+                billedBy = item.billedBy,
+                heading = item.heading,
+                items = item.items,
+                isHistoryOpen = false
+            )
+        }
+    }
+
+    fun deleteHistoryItem(id: Long) {
+        viewModelScope.launch {
+            repository?.deleteBill(id)
+        }
+    }
+
+    fun clearAllHistory() {
+        viewModelScope.launch {
+            repository?.clearAllHistory()
+        }
+    }
+
+    fun clearSaveBillMessage() {
+        _uiState.update { it.copy(saveBillMessage = null) }
     }
 
     fun saveItem(name: String, quantity: Double, unit: ItemUnit, unitPrice: Double) {
@@ -129,6 +231,16 @@ class BillingViewModel : ViewModel() {
             totalPrice = state.totalPrice
         )
 
+        // Also save to history automatically
+        viewModelScope.launch {
+            repository?.saveBill(
+                billedBy = state.billedBy,
+                heading = state.heading,
+                items = state.items,
+                totalAmount = state.totalPrice
+            )
+        }
+
         _uiState.update {
             it.copy(
                 generatedPdfFile = if (result.success) result.file else null,
@@ -139,5 +251,16 @@ class BillingViewModel : ViewModel() {
 
     fun clearPdfMessage() {
         _uiState.update { it.copy(pdfMessage = null) }
+    }
+
+    companion object {
+        fun provideFactory(application: Application): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    val app = application as? CalculatorApplication
+                    return BillingViewModel(app?.billingRepository) as T
+                }
+            }
     }
 }
