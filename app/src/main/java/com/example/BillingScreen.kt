@@ -517,24 +517,50 @@ fun BillingScreen(
                                     Text(
                                         text = item.rateLabel,
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Normal,
-                                            color = TextSecondary,
+                                            fontWeight = if (item.hasPrice) FontWeight.Normal else FontWeight.Medium,
+                                            color = if (item.hasPrice) TextSecondary else TextMuted,
                                             fontSize = 11.sp
                                         ),
                                         textAlign = TextAlign.End,
                                         modifier = Modifier.width(62.dp)
                                     )
 
-                                    // 4th Column: Kul Price (Total item price)
-                                    Text(
-                                        text = String.format(Locale.US, "₹%.2f", item.totalPrice),
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = HeaderTag
-                                        ),
-                                        textAlign = TextAlign.End,
-                                        modifier = Modifier.width(72.dp)
-                                    )
+                                    // 4th Column: Kul Price (Total item price or + Price button if pending)
+                                    Box(
+                                        modifier = Modifier.width(72.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        if (item.hasPrice) {
+                                            Text(
+                                                text = String.format(Locale.US, "₹%.2f", item.totalPrice),
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = HeaderTag
+                                                ),
+                                                textAlign = TextAlign.End
+                                            )
+                                        } else {
+                                            Surface(
+                                                color = HeaderGold.copy(alpha = 0.18f),
+                                                shape = RoundedCornerShape(6.dp),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, HeaderGold.copy(alpha = 0.6f)),
+                                                modifier = Modifier.clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    billingViewModel.openEditDialog(item)
+                                                }
+                                            ) {
+                                                Text(
+                                                    text = "+ Rate",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = HeaderGold,
+                                                        fontSize = 10.5.sp
+                                                    ),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
 
                                     // Delete action button
                                     Box(
@@ -952,8 +978,8 @@ fun AddEditItemDialog(
     }
     var priceText by remember {
         mutableStateOf(
-            editingItem?.unitPrice?.let {
-                if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
+            editingItem?.let {
+                if (it.unitPrice <= 0.0) "" else if (it.unitPrice % 1.0 == 0.0) it.unitPrice.toInt().toString() else it.unitPrice.toString()
             } ?: ""
         )
     }
@@ -1111,7 +1137,7 @@ fun AddEditItemDialog(
                             isError = false
                         },
                         label = { Text("Price/1${selectedUnit.symbol} (₹)") },
-                        placeholder = { Text("45") },
+                        placeholder = { Text("Khali chhod sakte hain (₹0)") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -1124,6 +1150,19 @@ fun AddEditItemDialog(
                             .testTag("input_item_price")
                     )
                 }
+
+                // Helpful note about leaving price empty
+                Text(
+                    text = if (parsedPrice > 0.0) {
+                        "✓ Rate set: ₹${String.format(Locale.US, "%.1f", parsedPrice)} / ${selectedUnit.symbol}"
+                    } else {
+                        "💡 Tip: Agar abhi price nahi pata toh khali chhod dein. Baad me pata chalne par tap karke price daal sakte hain."
+                    },
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = if (parsedPrice > 0.0) HeaderTag else HeaderGold,
+                        fontSize = 11.sp
+                    )
+                )
 
                 // 5. Live Calculation Preview Card
                 if (parsedQty > 0 && parsedPrice > 0) {
@@ -1161,7 +1200,7 @@ fun AddEditItemDialog(
 
                 if (isError) {
                     Text(
-                        text = "Kripya sahi naam, quantity aur price enter karein",
+                        text = "Kripya sahi naam aur quantity enter karein",
                         color = DarkClearKey,
                         style = MaterialTheme.typography.labelSmall
                     )
@@ -1171,9 +1210,9 @@ fun AddEditItemDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val priceVal = priceText.toDoubleOrNull()
+                    val priceVal = if (priceText.isBlank()) 0.0 else (priceText.toDoubleOrNull() ?: 0.0)
                     val qtyVal = quantityText.toDoubleOrNull()
-                    if (name.isBlank() || priceVal == null || qtyVal == null || qtyVal <= 0.0) {
+                    if (name.isBlank() || qtyVal == null || qtyVal <= 0.0 || priceVal < 0.0) {
                         isError = true
                     } else {
                         onSave(name, qtyVal, selectedUnit, priceVal)

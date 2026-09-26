@@ -158,11 +158,13 @@ object BillingPdfGenerator {
             // Unit Price (Rate per kg / L / Pc)
             paint.textAlign = Paint.Align.RIGHT
             paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            canvas.drawText(item.rateLabel, margin + colSnWidth + colNameWidth + colQtyWidth + colRateWidth - 8f, currentY + 16f, paint)
+            val rateText = if (item.hasPrice) item.rateLabel else "- / ${item.unit.symbol}"
+            canvas.drawText(rateText, margin + colSnWidth + colNameWidth + colQtyWidth + colRateWidth - 8f, currentY + 16f, paint)
 
             // Kul Price (Total Price)
             paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            canvas.drawText(String.format(Locale.US, "₹ %.2f", item.totalPrice), margin + contentWidth - 12f, currentY + 16f, paint)
+            val totalText = if (item.hasPrice) String.format(Locale.US, "₹ %.2f", item.totalPrice) else "Pending"
+            canvas.drawText(totalText, margin + contentWidth - 12f, currentY + 16f, paint)
             paint.textAlign = Paint.Align.LEFT
 
             currentY += rowHeight

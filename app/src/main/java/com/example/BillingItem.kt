@@ -26,8 +26,9 @@ data class BillingItem(
     val name: String,
     val quantity: Double = 1.0,
     val unit: ItemUnit = ItemUnit.KG,
-    val unitPrice: Double
+    val unitPrice: Double = 0.0
 ) {
+    val hasPrice: Boolean get() = unitPrice > 0.0
     val totalPrice: Double get() = quantity * unitPrice
 
     // Backward-compatibility property
@@ -65,7 +66,11 @@ data class BillingItem(
         }
 
     val rateLabel: String
-        get() = String.format(Locale.US, "₹%.1f/%s", unitPrice, unit.symbol)
+        get() = if (unitPrice <= 0.0) {
+            "- / ${unit.symbol}"
+        } else {
+            String.format(Locale.US, "₹%.1f/%s", unitPrice, unit.symbol)
+        }
 }
 
 object BillingDefaults {
