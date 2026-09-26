@@ -138,7 +138,7 @@ fun BillingScreen(
                             .padding(horizontal = 4.dp)
                             .testTag("billing_header_container")
                     ) {
-                        // Editable Person Name Box (Coloum) right above "BILLING & ITEM LIST"
+                        // Editable Name Box (Coloum)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
@@ -155,18 +155,11 @@ fun BillingScreen(
                                 )
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = HeaderGold,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
                             BasicTextField(
                                 value = uiState.billedBy,
                                 onValueChange = { billingViewModel.updateBilledBy(it) },
                                 textStyle = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.2.sp,
                                     color = HeaderGold,
                                     textAlign = TextAlign.Center
@@ -180,11 +173,11 @@ fun BillingScreen(
                                     Box(contentAlignment = Alignment.Center) {
                                         if (uiState.billedBy.isEmpty()) {
                                             Text(
-                                                text = "APNA NAAM LIKHEIN",
-                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                text = "NAME",
+                                                style = MaterialTheme.typography.titleMedium.copy(
                                                     fontWeight = FontWeight.Bold,
-                                                    color = HeaderGold.copy(alpha = 0.55f),
-                                                    letterSpacing = 1.sp,
+                                                    color = HeaderGold.copy(alpha = 0.65f),
+                                                    letterSpacing = 1.2.sp,
                                                     textAlign = TextAlign.Center
                                                 )
                                             )
@@ -210,12 +203,14 @@ fun BillingScreen(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "BILLING & ITEM LIST",
+                            text = "SMART BILLING & ITEM LIST INVOICE",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.8.sp,
-                                color = TextSecondary
-                            )
+                                letterSpacing = 1.1.sp,
+                                color = TextSecondary,
+                                fontSize = 10.sp
+                            ),
+                            maxLines = 1
                         )
                     }
                 },
